@@ -93,5 +93,6 @@ $$(".guide-suggestions button").forEach(button => button.addEventListener("click
 $("#runCurator").addEventListener("click", () => { $("#aiStatus").textContent = "Reading your archive locally…"; window.setTimeout(() => { const tags = [...new Set(memories.flatMap(memory => memory.tags || []))].slice(0,5); $("#aiTags").innerHTML = tags.map(tag => `<span>${escapeHtml(tag)}</span>`).join(""); $("#aiStatus").textContent = `${memories.length} memories reviewed. No data left this device.`; },450); });
 $("#processTranscript").addEventListener("click", () => { const text = $("#transcriptInput").value.trim(); $("#transcriptResult").textContent = text ? `Ready to index: “${text.slice(0,120)}${text.length > 120 ? "…" : ""}”` : "Add a transcript first. Your words will remain unchanged."; });
 $("#exportButton").addEventListener("click", exportMemorial);
+$("#railExport").addEventListener("click", exportMemorial);
 $("#resetDemo").addEventListener("click", () => { if (confirm("Restore the three sample memories?")) { memories = seededMemories.map(item => ({...item})); saveMemories(); renderArchive(); } });
 renderArchive();
