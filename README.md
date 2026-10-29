@@ -61,6 +61,33 @@ connection fails, the app explicitly returns to its transparent keyword
 curator and deterministic retrieval fallback. The Guide still refuses to
 invent missing details.
 
+### Optional local audio transcription
+
+The browser cannot run Faster-Whisper by itself, so the repository includes a
+small localhost-only service in `whisper_service.py`. It supports multilingual
+audio and receives files only from the Marigold origin.
+
+In a second PowerShell window:
+
+```powershell
+cd C:\Users\pkumu\Kumuda\marigold-router
+py -m venv .venv-whisper
+.\.venv-whisper\Scripts\Activate.ps1
+python -m pip install -r requirements-whisper.txt
+$env:WHISPER_MODEL="small"
+python -m uvicorn whisper_service:app --host 127.0.0.1 --port 8000
+```
+
+The first start downloads the Faster-Whisper `small` model. For a faster,
+lighter CPU setup use `$env:WHISPER_MODEL="base"`; for better multilingual
+quality use `$env:WHISPER_MODEL="medium"` if the machine has enough memory.
+The app's Whisper endpoint should remain `http://localhost:8000`.
+
+Once running, attach an audio file in **Add a memory**. Marigold sends it to
+the local service, stores the returned transcript in the memory, and keeps the
+audio/transcription path local. Check `http://localhost:8000/health` if the
+attachment reports a transcription failure.
+
 ## Responsible AI promise
 
 - Marigold Router does not impersonate or generate responses as the deceased.

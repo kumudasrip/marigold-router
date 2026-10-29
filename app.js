@@ -22,14 +22,14 @@ function saveMemories() {
 function loadAiSettings() {
   try {
     const saved = JSON.parse(localStorage.getItem(AI_SETTINGS_KEY));
-    return {endpoint: saved?.endpoint || "http://localhost:11434", model: saved?.model || "gemma4:e4b", connected: false};
+    return {endpoint: saved?.endpoint || "http://localhost:11434", model: saved?.model || "gemma4:e4b", whisperEndpoint: saved?.whisperEndpoint || "http://localhost:8000", connected: false};
   } catch (error) {
     console.warn("Local AI settings unavailable; using defaults.", error);
-    return {endpoint:"http://localhost:11434", model:"gemma4:e4b", connected:false};
+    return {endpoint:"http://localhost:11434", model:"gemma4:e4b", whisperEndpoint:"http://localhost:8000", connected:false};
   }
 }
 function saveAiSettings() {
-  localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify({endpoint:aiSettings.endpoint, model:aiSettings.model}));
+  localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify({endpoint:aiSettings.endpoint, model:aiSettings.model, whisperEndpoint:aiSettings.whisperEndpoint}));
 }
 function setAiStatus(text, connected = aiSettings.connected) {
   $("#ollamaStatus").textContent = text;
@@ -55,6 +55,15 @@ function parseModelJson(text) {
 }
 function archiveContext() {
   return memories.map((memory, index) => `[${index + 1}] ${memory.title} | ${memory.year || "undated"} | ${memory.body} | source: ${memory.source || "private archive"}`).join("\n");
+}
+async function transcribeAudio(file) {
+  const form = new FormData();
+  form.append("audio", file, file.name);
+  const response = await fetch(`${aiSettings.whisperEndpoint.replace(/\/$/, "")}/transcribe`, {method:"POST", body:form});
+  if (!response.ok) throw new Error(`Whisper returned HTTP ${response.status}`);
+  const result = await response.json();
+  if (typeof result.text !== "string" || !result.text.trim()) throw new Error("Whisper returned an empty transcript.");
+  return result;
 }
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[char])); }
 function curateMemory(title, body) {
@@ -130,9 +139,13 @@ $("#closeDrawer").addEventListener("click", closeDrawer);
 $("#memoryForm").addEventListener("submit", event => {
   event.preventDefault();
   const form = new FormData(event.currentTarget); const file = $("#memoryAttachment").files[0];
-  const memory = {id:`memory-${Date.now()}`,title:form.get("title"),body:form.get("body"),type:form.get("type"),year:form.get("year"),source:form.get("source") || "added privately",tags:curateMemory(form.get("title"),form.get("body"))};
-  const finish = data => { memory.image = data; memory.attachmentType = file?.type.startsWith("audio") ? "audio" : "image"; memories.unshift(memory); saveMemories(); renderArchive(); event.currentTarget.reset(); closeModal(); location.hash = "archive"; };
-  if (file) { const reader = new FileReader(); reader.addEventListener("load", () => finish(reader.result)); reader.readAsDataURL(file); } else finish("");
+  const title = String(form.get("title") || "").trim();
+  const typedBody = String(form.get("body") || "").trim();
+  if (!title || (!typedBody && !file)) { $("#attachmentStatus").textContent = "Add a written detail or attach an audio/photo file first."; return; }
+  const memory = {id:`memory-${Date.now()}`,title,body:typedBody,type:form.get("type"),year:form.get("year"),source:form.get("source") || "added privately",tags:curateMemory(title,typedBody)};
+  const finish = data => { if (file?.type.startsWith("audio")) memory.audio = data; else memory.image = data; memory.attachmentType = file?.type.startsWith("audio") ? "audio" : "image"; memories.unshift(memory); saveMemories(); renderArchive(); event.currentTarget.reset(); $("#attachmentStatus").textContent = "kept locally in this browser · audio is transcribed by local Whisper"; closeModal(); location.hash = "archive"; };
+  const finishAudio = async () => { try { $("#attachmentStatus").textContent = "Transcribing locally with Whisper…"; const transcript = await transcribeAudio(file); memory.body = typedBody ? `${typedBody}\n\n${transcript.text}` : transcript.text; memory.transcriptLanguage = transcript.language || "auto"; memory.tags = curateMemory(title, memory.body); const reader = new FileReader(); reader.addEventListener("load", () => finish(reader.result)); reader.readAsDataURL(file); } catch (error) { console.error("Local Whisper transcription failed.", error); $("#attachmentStatus").textContent = "Whisper could not transcribe this file. Check the local service, then try again."; } };
+  if (file?.type.startsWith("audio")) finishAudio(); else if (file) { const reader = new FileReader(); reader.addEventListener("load", () => finish(reader.result)); reader.readAsDataURL(file); } else finish("");
 });
 $("#archiveSearch").addEventListener("input", renderArchive);
 $$(".filter-button").forEach(button => button.addEventListener("click", () => { $$(".filter-button").forEach(item => item.classList.remove("active")); button.classList.add("active"); activeFilter = button.dataset.filter; renderArchive(); }));
@@ -146,3 +159,4 @@ $("#railExport").addEventListener("click", exportMemorial);
 $("#resetDemo").addEventListener("click", () => { if (confirm("Restore the three sample memories?")) { memories = seededMemories.map(item => ({...item})); saveMemories(); renderArchive(); } });
 renderArchive();
 $("#ollamaEndpoint").value = aiSettings.endpoint;
+$("#whisperEndpoint").value = aiSettings.whisperEndpoint;
