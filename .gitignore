@@ -1,0 +1,43 @@
+# Python environments and caches
+.venv/
+.venv-*/
+venv/
+env/
+__pycache__/
+__pycache__
+*.py[cod]
+*$py.class
+
+# Local model and tool caches
+.cache/
+.cache-*/
+models/
+*.bin
+*.gguf
+*.pt
+*.safetensors
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# Generated exports and local demo files
+marigold-archive.html
+marigold-memorial.html
+*.wav
+*.mp3
+*.m4a
+*.webm
+*.ogg
+
+# Editor, OS, and test artifacts
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db
+coverage/
+dist/
+*.log
