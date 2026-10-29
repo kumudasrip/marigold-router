@@ -1,4 +1,5 @@
 const STORAGE_KEY = "marigold-router-memories";
+const AI_SETTINGS_KEY = "marigold-router-ai-settings";
 const seededMemories = [
   {id:"seed-1",title:"The cardamom tea ritual",body:"Every Sunday, she warmed the cups before pouring tea. The kitchen smelled of cardamom and toasted sugar, and everyone knew to stay a little longer.",type:"story",year:"circa 1998",source:"Meera, remembered at home",tags:["kitchen","ritual","belonging"]},
   {id:"seed-2",title:"A yellow sari in the garden",body:"A photograph from the jasmine garden. She wore the yellow sari with the tiny blue border and held the first flowers of the season.",type:"photo",year:"2004",source:"Family photograph",tags:["garden","photograph","joy"]},
@@ -6,6 +7,7 @@ const seededMemories = [
 ];
 let memories = loadMemories();
 let activeFilter = "all";
+let aiSettings = loadAiSettings();
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 
@@ -16,6 +18,43 @@ function loadMemories() {
 function saveMemories() {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(memories)); }
   catch (error) { console.error("Could not save local archive.", error); }
+}
+function loadAiSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(AI_SETTINGS_KEY));
+    return {endpoint: saved?.endpoint || "http://localhost:11434", model: saved?.model || "gemma4:e4b", connected: false};
+  } catch (error) {
+    console.warn("Local AI settings unavailable; using defaults.", error);
+    return {endpoint:"http://localhost:11434", model:"gemma4:e4b", connected:false};
+  }
+}
+function saveAiSettings() {
+  localStorage.setItem(AI_SETTINGS_KEY, JSON.stringify({endpoint:aiSettings.endpoint, model:aiSettings.model}));
+}
+function setAiStatus(text, connected = aiSettings.connected) {
+  $("#ollamaStatus").textContent = text;
+  $("#curatorMode").textContent = connected ? "Ollama connected" : "fallback mode";
+}
+async function ollamaRequest(path, body) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), 30000);
+  try {
+    const response = await fetch(`${aiSettings.endpoint.replace(/\/$/, "")}${path}`, {
+      method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body), signal:controller.signal
+    });
+    if (!response.ok) throw new Error(`Ollama returned HTTP ${response.status}`);
+    return await response.json();
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+function parseModelJson(text) {
+  const match = text.match(/\{[\s\S]*\}/);
+  if (!match) throw new Error("The local model did not return JSON.");
+  return JSON.parse(match[0]);
+}
+function archiveContext() {
+  return memories.map((memory, index) => `[${index + 1}] ${memory.title} | ${memory.year || "undated"} | ${memory.body} | source: ${memory.source || "private archive"}`).join("\n");
 }
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>"']/g, char => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[char])); }
 function curateMemory(title, body) {
@@ -61,6 +100,15 @@ function answerGuide(question) {
   if (!matches.length) return {text:"That memory is not in the archive yet. I won't fill the silence with a guess — try adding a story, photograph, or voice note that speaks to it.", citations:[]};
   return {text:`I found ${matches.length === 1 ? "one memory" : `${matches.length} memories`} that may help. ${matches.slice(0,2).map(memory => memory.body).join(" ")}`, citations:matches.slice(0,2)};
 }
+async function answerGuideWithOllama(question) {
+  const result = await ollamaRequest("/api/generate", {
+    model:aiSettings.model, stream:false, format:"json",
+    prompt:`You are Marigold's Ofrenda Guide. Answer only from the archive below. Never impersonate a deceased person, never invent details, and refuse clearly if the archive does not support an answer. Return JSON with keys answer (string) and citations (array of integers referring to archive item numbers).\n\nARCHIVE:\n${archiveContext()}\n\nQUESTION: ${question}`
+  });
+  const parsed = parseModelJson(result.response || "");
+  const citations = (Array.isArray(parsed.citations) ? parsed.citations : []).map(number => memories[number - 1]).filter(Boolean).slice(0, 3);
+  return {text:typeof parsed.answer === "string" ? parsed.answer : "The local model did not provide a grounded answer.", citations};
+}
 function addChatMessage(text, isUser, citations = []) {
   const message = document.createElement("div");
   message.className = `chat-message ${isUser ? "user-message" : "guide-message"}`;
@@ -88,11 +136,13 @@ $("#memoryForm").addEventListener("submit", event => {
 });
 $("#archiveSearch").addEventListener("input", renderArchive);
 $$(".filter-button").forEach(button => button.addEventListener("click", () => { $$(".filter-button").forEach(item => item.classList.remove("active")); button.classList.add("active"); activeFilter = button.dataset.filter; renderArchive(); }));
-$("#guideForm").addEventListener("submit", event => { event.preventDefault(); const input = $("#guideQuestion"); const question = input.value.trim(); if (!question) return; addChatMessage(question,true); input.value = ""; const answer = answerGuide(question); window.setTimeout(() => addChatMessage(answer.text,false,answer.citations),220); });
+$("#guideForm").addEventListener("submit", async event => { event.preventDefault(); const input = $("#guideQuestion"); const question = input.value.trim(); if (!question) return; addChatMessage(question,true); input.value = ""; const answer = aiSettings.connected ? await answerGuideWithOllama(question).catch(error => { console.error("Local Guide failed.", error); setAiStatus("Guide unavailable · fallback is active", false); aiSettings.connected = false; return answerGuide(question); }) : answerGuide(question); window.setTimeout(() => addChatMessage(answer.text,false,answer.citations),220); });
 $$(".guide-suggestions button").forEach(button => button.addEventListener("click", () => { $("#guideQuestion").value = button.textContent; $("#guideForm").requestSubmit(); }));
-$("#runCurator").addEventListener("click", () => { $("#aiStatus").textContent = "Reading your archive locally…"; window.setTimeout(() => { const tags = [...new Set(memories.flatMap(memory => memory.tags || []))].slice(0,5); $("#aiTags").innerHTML = tags.map(tag => `<span>${escapeHtml(tag)}</span>`).join(""); $("#aiStatus").textContent = `${memories.length} memories reviewed. No data left this device.`; },450); });
-$("#processTranscript").addEventListener("click", () => { const text = $("#transcriptInput").value.trim(); $("#transcriptResult").textContent = text ? `Ready to index: “${text.slice(0,120)}${text.length > 120 ? "…" : ""}”` : "Add a transcript first. Your words will remain unchanged."; });
+$("#runCurator").addEventListener("click", async () => { $("#aiStatus").textContent = "Reading your archive locally…"; if (!aiSettings.connected) { window.setTimeout(() => { const tags = [...new Set(memories.flatMap(memory => memory.tags || []))].slice(0,5); $("#aiTags").innerHTML = tags.map(tag => `<span>${escapeHtml(tag)}</span>`).join(""); $("#aiStatus").textContent = `${memories.length} memories reviewed with the transparent fallback.`; },450); return; } try { const result = await ollamaRequest("/api/generate", {model:aiSettings.model,stream:false,format:"json",prompt:`Extract 3 to 6 short thematic tags from these private memories. Return only JSON like {"tags":["kitchen","ritual"]}. Do not infer identity or facts not stated.\n\n${archiveContext()}`}); const parsed = parseModelJson(result.response || ""); const tags = Array.isArray(parsed.tags) ? parsed.tags.filter(tag => typeof tag === "string").slice(0,6) : []; if (!tags.length) throw new Error("No tags returned."); $("#aiTags").innerHTML = tags.map(tag => `<span>${escapeHtml(tag)}</span>`).join(""); $("#aiStatus").textContent = `Ollama reviewed ${memories.length} memories locally.`; } catch (error) { console.error("Local Curator failed.", error); aiSettings.connected = false; setAiStatus("Curator unavailable · fallback is active", false); $("#runCurator").click(); } });
+$("#processTranscript").addEventListener("click", async () => { const text = $("#transcriptInput").value.trim(); if (!text) { $("#transcriptResult").textContent = "Add a transcript first. Your words will remain unchanged."; return; } if (!aiSettings.connected) { $("#transcriptResult").textContent = `Ready to index: “${text.slice(0,120)}${text.length > 120 ? "…" : ""}”`; return; } try { const result = await ollamaRequest("/api/generate", {model:aiSettings.model,stream:false,prompt:`Clean punctuation and paragraph breaks in this oral-history transcript. Preserve every word and meaning. Return only the cleaned transcript.\n\n${text}`}); $("#transcriptResult").textContent = result.response?.trim() || text; } catch (error) { console.error("Transcript cleanup failed.", error); $("#transcriptResult").textContent = "Local cleanup failed. The original transcript is preserved."; } });
+$("#connectOllama").addEventListener("click", async () => { aiSettings.endpoint = $("#ollamaEndpoint").value.trim().replace(/\/$/, ""); aiSettings.model = $("#ollamaModel").value; saveAiSettings(); setAiStatus("Checking local Ollama…", false); try { const response = await fetch(`${aiSettings.endpoint}/api/tags`); if (!response.ok) throw new Error(`Ollama returned HTTP ${response.status}`); const data = await response.json(); const models = Array.isArray(data.models) ? data.models.map(item => item.name).filter(Boolean) : []; if (models.length) { $("#ollamaModel").innerHTML = models.map(model => `<option value="${escapeHtml(model)}">${escapeHtml(model)}</option>`).join(""); $("#ollamaModel").value = models.includes(aiSettings.model) ? aiSettings.model : models[0]; aiSettings.model = $("#ollamaModel").value; saveAiSettings(); } aiSettings.connected = true; setAiStatus(`Connected · ${models.length || "no"} local model${models.length === 1 ? "" : "s"}`, true); } catch (error) { console.error("Ollama connection failed.", error); aiSettings.connected = false; setAiStatus("Could not reach Ollama · fallback is active", false); } });
 $("#exportButton").addEventListener("click", exportMemorial);
 $("#railExport").addEventListener("click", exportMemorial);
 $("#resetDemo").addEventListener("click", () => { if (confirm("Restore the three sample memories?")) { memories = seededMemories.map(item => ({...item})); saveMemories(); renderArchive(); } });
 renderArchive();
+$("#ollamaEndpoint").value = aiSettings.endpoint;

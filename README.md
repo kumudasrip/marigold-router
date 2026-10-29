@@ -31,15 +31,35 @@ the memories and their sources.
   and explicit refusal when a detail is missing
 - Local-only privacy panel and downloadable memorial export
 
-## Local model integration
+## Local AI integration
 
-The interface is designed around local Ollama/Whisper workflows, but the
-frontend intentionally has no network dependency. The Curator uses transparent
-keyword tagging and source citations as a safe fallback when a local model is
-not connected. The transcript panel is ready for a local Whisper adapter.
-A production integration can replace `curateMemory()` and `answerGuide()` in
-`app.js` with calls to local Ollama while preserving the same refusal and
-citation contract.
+The app now has a real optional Ollama adapter and still works fully offline
+without it:
+
+1. Install Ollama from <https://ollama.com>.
+2. Pull an open model, for example `ollama pull gemma4:e4b`.
+3. Allow browser requests for the local app before starting Ollama:
+
+   ```powershell
+   $env:OLLAMA_ORIGINS="http://localhost:4173"
+   ollama serve
+   ```
+
+4. Open the **Local AI** section, keep the endpoint at
+   `http://localhost:11434`, choose the detected model, and select **Test
+   connection**.
+
+When connected, Ollama powers:
+
+- Curator thread extraction as structured JSON
+- Retrieval-grounded Guide answers with memory-number citations
+- Transcript punctuation and paragraph cleanup
+- Local model discovery through `/api/tags`
+
+The browser calls Ollama directly; there is no Marigold backend. If the
+connection fails, the app explicitly returns to its transparent keyword
+curator and deterministic retrieval fallback. The Guide still refuses to
+invent missing details.
 
 ## Responsible AI promise
 
