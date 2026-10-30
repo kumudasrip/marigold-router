@@ -4,13 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f5f2ea">
-  <title>Marigold — a private place for what should not be lost</title>
-  <link rel="stylesheet" href="styles.css?v=ofrenda-3">
+  <title>Marigold /router</title>
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="stylesheet" href="styles.css?v=ofrenda-5">
 </head>
 <body>
   <div class="grain"></div>
   <aside class="app-rail">
-    <a class="rail-brand" href="#home"><span class="brand-mark">⌁</span><span>marigold<small>/router</small></span></a>
+    <a class="rail-brand" href="#home"><img class="brand-logo" src="logo.png" alt="Marigold /router"></a>
     <p class="rail-label">your private studio</p>
     <nav class="rail-nav" aria-label="Studio navigation">
       <a class="active" href="#home"><span>⌂</span> Overview</a>
@@ -25,7 +26,7 @@
     </div>
   </aside>
   <header class="site-header">
-    <a class="brand" href="#home"><span class="brand-mark">⌁</span><span>marigold<small>/router</small></span></a>
+    <a class="brand" href="#home"><img class="brand-logo" src="logo.png" alt="Marigold /router"></a>
     <nav class="main-nav" aria-label="Main navigation">
       <a href="#archive">The archive</a><a href="#studio">AI studio</a><a href="#guide">The guide</a>
     </nav>
@@ -83,11 +84,11 @@
 
     <section class="privacy-section"><div class="privacy-symbol">▣</div><div><p class="kicker"><span></span> Your private room</p><h2>Nothing leaves<br>without your <em>say-so.</em></h2><p>Marigold uses your browser as its little wooden box. No account, no analytics, no family stories used for training.</p></div><div class="privacy-checks"><span><b>✓</b> Browser storage</span><span><b>✓</b> No cloud upload</span><span><b>✓</b> Export anytime</span></div></section>
   </main>
-  <footer class="site-footer"><a class="brand" href="#home"><span class="brand-mark">⌁</span><span>marigold<small>/router</small></span></a><p>a private place for the stories that stay</p><a href="#home">back to top ↑</a></footer>
+  <footer class="site-footer"><a class="brand" href="#home"><img class="brand-logo" src="logo.png" alt="Marigold /router"></a><p>a private place for the stories that stay</p><a href="#home">back to top ↑</a></footer>
   <nav class="mobile-nav" aria-label="Mobile navigation"><a class="active" href="#home"><span>⌂</span>Home</a><a href="#archive"><span>▤</span>Archive</a><a href="#add-memory"><span>＋</span>Add</a><a href="#guide"><span>◌</span>Guide</a></nav>
 
   <div class="modal-backdrop" id="memoryModal" hidden><div class="memory-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"><button class="modal-close" id="closeMemoryModal" type="button">×</button><p class="kicker"><span></span> New archive entry</p><h2 id="modalTitle">Keep a small<br><em>detail.</em></h2><form id="memoryForm"><div class="form-grid"><label>Title<input name="title" type="text" placeholder="The cardamom tea ritual" required></label><label>When<input name="year" type="text" placeholder="circa 1998"></label></div><label>What happened?<textarea name="body" rows="4" placeholder="Start with the detail you can still feel..."></textarea><div class="form-grid"><label>Format<select name="type"><option value="story">Written story</option><option value="photo">Photograph</option><option value="voice">Voice note</option></select></label><label>Source / who remembers<input name="source" type="text" placeholder="Meera, remembered at home"></label></div><label class="file-drop" for="memoryAttachment"><span>＋</span><b>Attach a photograph or audio note</b><small id="attachmentStatus">kept locally in this browser · audio is transcribed by local Whisper</small><input id="memoryAttachment" type="file" accept="image/*,audio/*"></label><div class="modal-footer"><span>Curator will suggest threads after saving.</span><button class="button" type="submit">Place in archive <span>↗</span></button></div></form></div></div>
   <div class="memory-drawer-backdrop" id="memoryDrawer" hidden><aside class="memory-drawer"><button class="modal-close" id="closeDrawer" type="button">×</button><div id="drawerContent"></div></aside></div>
-  <script src="app.js?v=ofrenda-6"></script>
+  <script src="app.js?v=ofrenda-7"></script>
 </body>
 </html>
