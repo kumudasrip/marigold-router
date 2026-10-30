@@ -9,6 +9,7 @@ const seededMemories = [
 let memories = loadMemories();
 let activeFilter = "all";
 let aiSettings = loadAiSettings();
+let memorySubmitBusy = false;
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 
@@ -115,6 +116,13 @@ function openDrawer(id) {
   $(".delete-from-drawer").addEventListener("click", () => { memories = memories.filter(item => item.id !== id); saveMemories(); closeDrawer(); renderArchive(); });
 }
 function closeDrawer() { $("#memoryDrawer").hidden = true; }
+function showToast(title, message) {
+  const toast = document.createElement("div");
+  toast.className = "marigold-toast";
+  toast.innerHTML = `<strong>${escapeHtml(title)}</strong>${escapeHtml(message)}`;
+  document.body.appendChild(toast);
+  window.setTimeout(() => toast.remove(), 3500);
+}
 function answerGuide(question) {
   const rawTerms = question.toLowerCase().split(/\W+/).filter(term => term.length > 3);
   const intentMap = {cook:"kitchen", cooking:"kitchen", recipe:"kitchen", food:"kitchen", love:"belonging", loved:"belonging", song:"music", songs:"music", sing:"music", flower:"garden", flowers:"garden"};
@@ -152,13 +160,20 @@ $("#memoryModal").addEventListener("click", event => { if (event.target === $("#
 $("#closeDrawer").addEventListener("click", closeDrawer);
 $("#memoryForm").addEventListener("submit", event => {
   event.preventDefault();
-  const form = new FormData(event.currentTarget); const file = $("#memoryAttachment").files[0];
+  if (memorySubmitBusy) return;
+  const formElement = event.currentTarget;
+  const form = new FormData(formElement); const file = $("#memoryAttachment").files[0];
   const title = String(form.get("title") || "").trim();
   const typedBody = String(form.get("body") || "").trim();
   if (!title || (!typedBody && !file)) { $("#attachmentStatus").textContent = "Add a written detail or attach an audio/photo file first."; return; }
+  memorySubmitBusy = true;
+  const submitButton = formElement.querySelector('button[type="submit"]');
+  submitButton.disabled = true;
+  submitButton.innerHTML = file?.type.startsWith("audio") ? "Transcribing locally… <span>◌</span>" : "Saving memory… <span>◌</span>";
   const memory = {id:`memory-${Date.now()}`,title,body:typedBody,type:form.get("type"),year:form.get("year"),source:form.get("source") || "added privately",tags:curateMemory(title,typedBody)};
-  const finish = data => { if (file?.type.startsWith("audio")) memory.audio = data; else memory.image = data; memory.attachmentType = file?.type.startsWith("audio") ? "audio" : "image"; memories.unshift(memory); saveMemories(); renderArchive(); event.currentTarget.reset(); $("#attachmentStatus").textContent = "kept locally in this browser · audio is transcribed by local Whisper"; closeModal(); location.hash = "archive"; };
-  const finishAudio = async () => { try { $("#attachmentStatus").textContent = "Transcribing locally with Whisper…"; const transcript = await transcribeAudio(file); memory.body = typedBody ? `${typedBody}\n\n${transcript.text}` : transcript.text; memory.transcriptLanguage = transcript.language || "auto"; memory.tags = curateMemory(title, memory.body); const reader = new FileReader(); reader.addEventListener("load", () => finish(reader.result)); reader.readAsDataURL(file); } catch (error) { console.error("Local Whisper transcription failed.", error); $("#attachmentStatus").textContent = "Whisper could not transcribe this file. Check the local service, then try again."; } };
+  const unlockSubmit = () => { memorySubmitBusy = false; submitButton.disabled = false; submitButton.innerHTML = "Place in archive <span>↗</span>"; };
+  const finish = data => { if (file?.type.startsWith("audio")) memory.audio = data; else memory.image = data; memory.attachmentType = file?.type.startsWith("audio") ? "audio" : "image"; memories.unshift(memory); saveMemories(); renderArchive(); formElement.reset(); $("#attachmentStatus").textContent = "Transcript ready — saved locally"; unlockSubmit(); closeModal(); location.hash = "archive"; showToast("Memory placed in the archive", file?.type.startsWith("audio") ? "Your local transcript is ready and saved." : "Your story is saved on this device."); };
+  const finishAudio = async () => { try { $("#attachmentStatus").textContent = "Transcribing locally with Whisper…"; const transcript = await transcribeAudio(file); memory.body = typedBody ? `${typedBody}\n\n${transcript.text}` : transcript.text; memory.transcriptLanguage = transcript.language || "auto"; memory.tags = curateMemory(title, memory.body); const reader = new FileReader(); reader.addEventListener("load", () => finish(reader.result)); reader.addEventListener("error", () => { unlockSubmit(); $("#attachmentStatus").textContent = "The audio could not be read."; }); reader.readAsDataURL(file); } catch (error) { console.error("Local Whisper transcription failed.", error); unlockSubmit(); $("#attachmentStatus").textContent = "Whisper could not transcribe this file. Check the local service, then try again."; } };
   if (file?.type.startsWith("audio")) finishAudio(); else if (file) { const reader = new FileReader(); reader.addEventListener("load", () => finish(reader.result)); reader.readAsDataURL(file); } else finish("");
 });
 $("#archiveSearch").addEventListener("input", renderArchive);
