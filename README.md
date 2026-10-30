@@ -1,111 +1,172 @@
-# Marigold Router
+# Marigold /router
 
-> A private place for the stories that stay.
+> **A private place for the stories that stay.**
 
-Marigold Router is an offline-first oral-history studio and virtual ofrenda
-builder. It helps families gather stories, photographs, recipes, and voices
-without pretending to recreate the people they remember.
+<p align="center">
+  An offline-first oral-history studio and virtual ofrenda for collecting memories, photographs, recipes, and voices without recreating the people behind them.
+</p>
 
-The project is intentionally frontend-first. Memories live in the browser,
-optional AI runs on the user's own machine, and missing details are refused
-instead of invented.
+<p align="center">
+  Built for <strong>Hacktoberfest 2026 Open-Source AI Challenge: Week 4</strong>
+</p>
+
+---
+
+## The idea
+
+Important memories often live in ordinary details: a cardamom tea ritual, a
+song on the radio at dusk, a photograph from a garden, or a sentence someone
+said once and never wrote down.
+
+Marigold /router is designed to help people keep those details close. It
+combines a warm, ofrenda-inspired archive with local AI tools that can help
+organise and retrieve memories while keeping the data on the user's machine.
+
+This project is intentionally **not** a digital recreation of a person. The
+Guide does not speak as the deceased, invent missing details, or turn a family
+archive into a fictional chatbot. When the answer is not present, it says so.
+
+## Why local AI?
+
+The archive is personal by design. Marigold uses local tools instead of a
+hosted AI backend:
+
+- **Privacy:** stories and audio do not need to leave the device.
+- **Offline-first use:** the browser archive works without an account or cloud
+  service.
+- **User control:** Ollama models can be selected locally and replaced without
+  changing the application.
+- **Transparent limitations:** unsupported questions receive an explicit
+  “not in the archive” response.
+- **Responsible memory work:** AI helps with organisation and retrieval; it
+  does not impersonate people or manufacture family history.
 
 ## Features
 
-### Archive and ofrenda
+### A local memory archive
 
-- Add written stories, photographs, and audio notes.
-- Store memories locally in browser `localStorage`.
+- Add written stories, photographs, and voice notes.
+- Store memories in the current browser profile using `localStorage`.
 - Search the archive and filter by story, photo, or voice.
-- Open a memory detail drawer with its source and tags.
-- Review a lightweight memory timeline.
-- Export a self-contained HTML memorial.
+- View source, year, tags, transcript, and memory details.
+- Browse a lightweight timeline of saved entries.
+- Export the archive as a standalone HTML file.
+
+### Ofrenda Guide
+
+- Ask questions about the memories already in the archive.
+- Retrieve relevant entries using local archive context.
+- Display source titles alongside grounded answers.
+- Refuse clearly when the archive does not support a question.
+- Never answer in the voice or identity of a deceased person.
 
 ### Local AI studio
 
-- Connect directly to a local Ollama server.
-- Detect installed Ollama models through `/api/tags`.
-- Use Gemma 4 e4b for archive thread extraction.
-- Ask the Ofrenda Guide retrieval-grounded questions.
-- Show source citations for Guide answers.
-- Refuse questions unsupported by the archive.
-- Prepare and clean oral-history transcripts locally.
+- Connect directly to Ollama at `http://localhost:11434`.
+- Discover installed models through Ollama's `/api/tags` endpoint.
+- Use `gemma4:e4b` for local curation and Guide responses.
+- Extract transparent thematic threads from the archive.
+- Clean punctuation and paragraph breaks in pasted transcripts.
+- Continue working with deterministic fallback behaviour when Ollama is
+  unavailable.
 
-### Local audio transcription
+### Local voice transcription
 
-- Optional Faster-Whisper service for multilingual voice notes.
-- Audio is sent only to `127.0.0.1`.
-- The transcript is inserted into the memory before it is saved.
-- The original audio is kept as local browser data for the demo.
+- Optionally run Faster-Whisper as a localhost service.
+- Transcribe multilingual voice notes before saving them.
+- Keep both the original audio and transcript in the local browser archive.
+- Configure the Whisper model, device, and compute type with environment
+  variables.
 
 ## Quick start
 
-Clone the repository:
+### Prerequisites
+
+- Git
+- A modern browser
+- Python 3.10+ for the optional Whisper service
+- [Ollama](https://ollama.com) for the local AI features
+- Windows PowerShell, macOS Terminal, or a Linux shell
+
+### 1. Clone the repository
 
 ```powershell
 git clone https://github.com/kumudasrip/marigold-router.git
 cd marigold-router
 ```
 
-The browser app has no build step or package install.
+### 2. Start the browser app
+
+Marigold is a dependency-free static frontend. No npm install or build step
+is required.
 
 ```powershell
 py -m http.server 4173
 ```
 
-Open [http://localhost:4173](http://localhost:4173).
+Open:
 
-The app works without Ollama or Whisper using transparent local fallback
-logic. For the complete AI experience, follow the sections below.
+<http://localhost:4173>
 
-## Ollama setup
+The archive, search, filters, fallback Guide, and export work without Ollama
+or Whisper. The local AI and transcription services are optional additions.
 
-Marigold calls Ollama directly from the browser. No Marigold backend or cloud
-AI service is involved.
+## Enable local Gemma AI with Ollama
 
-1. Install Ollama from [ollama.com](https://ollama.com).
-2. Confirm the model is installed:
+Marigold calls Ollama directly from the browser. There is no Marigold backend
+and no hosted AI API key.
 
-   ```powershell
-   ollama list
-   ```
+### Install and verify the model
 
-3. If needed, install Gemma 4 e4b:
+Install Ollama, then check the installed models:
 
-   ```powershell
-   ollama pull gemma4:e4b
-   ```
+```powershell
+ollama list
+```
 
-4. If Ollama is not already running, allow the local Marigold origin and start
-   it:
+Install the recommended model if necessary:
 
-   ```powershell
-   $env:OLLAMA_ORIGINS="http://localhost:4173"
-   ollama serve
-   ```
+```powershell
+ollama pull gemma4:e4b
+```
 
-   If you see `bind: Only one usage of each socket address`, Ollama is already
-   running. Do not start a second server. Restart it with the environment
-   variable only if browser requests are blocked by CORS.
+Ollama normally starts in the background. If it is not running, configure the
+browser origin and start it:
 
-5. In Marigold's **Local AI** section:
-   - Keep the Ollama endpoint as `http://localhost:11434`.
-   - Choose `gemma4:e4b`.
-   - Click **Test text AI**.
+```powershell
+$env:OLLAMA_ORIGINS="http://localhost:4173"
+ollama serve
+```
 
-When connected, Ollama powers:
+If PowerShell reports:
 
-- Curator thread extraction as structured JSON.
-- Guide answers grounded in the local archive.
-- Citation selection from archive entries.
-- Transcript punctuation and paragraph cleanup.
+```text
+bind: Only one usage of each socket address is normally permitted
+```
 
-## Faster-Whisper setup
+Ollama is already running on port `11434`; do not start a second instance.
+Open the app and use the existing server. Only restart Ollama with
+`OLLAMA_ORIGINS` when the browser is blocked by CORS.
 
-Faster-Whisper runs as a small localhost service because a normal browser
-cannot load the Python speech model directly.
+### Connect from Marigold
 
-Open a second PowerShell window:
+1. Open the **Local AI** section.
+2. Set the endpoint to `http://localhost:11434`.
+3. Select `gemma4:e4b`.
+4. Click **Test text AI**.
+
+You can verify Ollama independently with:
+
+```powershell
+Invoke-WebRequest http://localhost:11434/api/tags
+```
+
+## Enable local audio transcription with Faster-Whisper
+
+The browser cannot load the Python speech model directly, so Marigold includes
+an optional small FastAPI service that runs on your machine.
+
+Open a second terminal:
 
 ```powershell
 cd marigold-router
@@ -116,81 +177,124 @@ $env:WHISPER_MODEL="small"
 python -m uvicorn whisper_service:app --host 127.0.0.1 --port 8000
 ```
 
-The first start downloads the selected model. Choose a model based on the
-machine:
+The first launch downloads the selected model. Available model choices include:
 
-| Model | Use |
-|---|---|
-| `base` | Faster and lighter CPU transcription |
+| Model | Best for |
+| --- | --- |
+| `base` | Lower memory use and faster CPU transcription |
 | `small` | Recommended quality/speed balance |
-| `medium` | Better quality, more memory and compute |
+| `medium` | Higher quality with greater memory and compute requirements |
 
-The Whisper endpoint in the app should be:
-
-```text
-http://localhost:8000
-```
-
-Check that the service is healthy:
+Check the service:
 
 ```powershell
 Invoke-WebRequest http://localhost:8000/health
 ```
 
-Then open **Add a memory**, choose **Voice note**, and attach an audio file.
-Whisper will transcribe it locally and Marigold will save the transcript with
-the memory.
+The app's Whisper endpoint should be:
+
+```text
+http://localhost:8000
+```
+
+Then choose **Add a memory**, select **Voice note**, and attach an audio file.
+The transcript is produced locally and saved with the memory.
+
+### Optional Whisper configuration
+
+```powershell
+$env:WHISPER_MODEL="base"
+$env:WHISPER_DEVICE="cpu"
+$env:WHISPER_COMPUTE_TYPE="int8"
+```
+
+The service accepts audio files up to 50 MB and removes its temporary upload
+file after transcription.
+
+## How it works
+
+```text
+                   ┌─────────────────────────────┐
+                   │        Browser archive      │
+                   │  memories · search · export │
+                   └──────────────┬──────────────┘
+                                  │
+              ┌───────────────────┼───────────────────┐
+              │                   │                   │
+              ▼                   ▼                   ▼
+       Local fallback       Ollama / Gemma       Faster-Whisper
+       retrieval + tags     curation + Guide     audio transcript
+              │                   │                   │
+              └───────────────────┴───────────────────┘
+                                  │
+                         Browser localStorage
+```
+
+1. The user adds a story, image, or audio note.
+2. The browser stores the archive locally.
+3. Optional Whisper converts audio to text on the same machine.
+4. Optional Ollama extracts themes or answers questions from archive context.
+5. The Guide returns grounded text and source references.
+6. The user can export a standalone HTML memorial.
 
 ## Privacy and responsible AI
 
 - No account or authentication is required.
-- Memories remain in the current browser profile's `localStorage`.
-- Ollama receives requests only through the configured local endpoint.
-- Faster-Whisper receives audio only through the local transcription service.
-- The Guide never speaks as or impersonates the deceased.
-- Every AI answer is expected to cite archive material.
-- Unsupported questions receive an explicit “not in the archive” response.
-- Use synthetic or consented material for demos.
+- Memories are stored in the current browser profile's `localStorage`.
+- Ollama requests use the configured local endpoint.
+- Whisper audio is sent only to the local transcription service.
+- The Guide does not impersonate the deceased.
+- The Guide does not invent unsupported details.
+- Demo data should be synthetic or shared with consent.
+- Browser `localStorage` is not encryption and should not be treated as a
+  secure vault for highly sensitive material.
 
-Browser storage is not encryption. Do not treat this demo as a secure vault
-for highly sensitive material without adding encryption and a threat model.
-
-## Repository layout
+## Project structure
 
 ```text
 .
-├── index.html                 Main app shell and UI sections
+├── index.html                 Main application shell
 ├── styles.css                 Ofrenda visual system and responsive layout
-├── app.js                    Archive state, AI adapters, and interactions
+├── app.js                     Archive state, AI adapters, and interactions
+├── logo.png                   Marigold /router logo and favicon source
 ├── whisper_service.py         Optional local Faster-Whisper API
 ├── requirements-whisper.txt  Whisper service dependencies
-├── README.md                 Setup and architecture documentation
+├── README.md                 Project documentation
 └── .gitignore                Local environments, models, media, and exports
 ```
 
 ## Troubleshooting
 
-### Ollama connection fails
+### The app looks unstyled or changes do not appear
+
+- Hard refresh with **Ctrl + Shift + R**.
+- Confirm the server is running from the repository root.
+- Use the exact origin `http://localhost:4173`.
+- Do not open `index.html` directly with `file://`.
+
+### Ollama does not connect
 
 - Confirm Ollama is running.
-- Visit `http://localhost:11434/api/tags`.
+- Visit <http://localhost:11434/api/tags>.
 - Confirm `gemma4:e4b` appears in the response.
-- Restart Ollama with `OLLAMA_ORIGINS=http://localhost:4173` if needed.
-- Refresh Marigold and click **Test text AI** again.
+- Set `OLLAMA_ORIGINS` before restarting Ollama if CORS blocks the browser.
+- Confirm the endpoint in the Local AI panel is
+  `http://localhost:11434`.
 
 ### Whisper transcription fails
 
-- Confirm the service is running on port `8000`.
-- Check `http://localhost:8000/health`.
-- Confirm the file is a supported audio format and under 50 MB.
-- Keep the Whisper PowerShell window open while transcribing.
-- Use `WHISPER_MODEL=base` if the machine runs out of memory.
+- Keep the Whisper terminal running.
+- Check <http://localhost:8000/health>.
+- Confirm the file is audio and smaller than 50 MB.
+- Try `WHISPER_MODEL=base` if the machine runs out of memory.
+- Recreate the virtual environment if dependencies are incompatible with the
+  selected Python installation.
 
-### Memories disappeared
+### Memories appear to be missing
 
-Memories are tied to the browser profile and origin. Check that you are using
-the same browser and `http://localhost:4173` origin. Clearing site data,
-private browsing, or changing ports creates a different storage location.
+Memories belong to a browser profile and origin. Use the same browser and
+`http://localhost:4173` address. Changing ports, clearing site data, private
+browsing, or switching browsers creates a different local storage location.
 
 ## License
 
