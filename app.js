@@ -1,5 +1,6 @@
 const STORAGE_KEY = "marigold-router-memories";
 const AI_SETTINGS_KEY = "marigold-router-ai-settings";
+const THEME_KEY = "marigold-router-theme";
 const seededMemories = [
   {id:"seed-1",title:"The cardamom tea ritual",body:"Every Sunday, she warmed the cups before pouring tea. The kitchen smelled of cardamom and toasted sugar, and everyone knew to stay a little longer.",type:"story",year:"circa 1998",source:"Meera, remembered at home",tags:["kitchen","ritual","belonging"]},
   {id:"seed-2",title:"A yellow sari in the garden",body:"A photograph from the jasmine garden. She wore the yellow sari with the tiny blue border and held the first flowers of the season.",type:"photo",year:"2004",source:"Family photograph",tags:["garden","photograph","joy"]},
@@ -10,6 +11,19 @@ let activeFilter = "all";
 let aiSettings = loadAiSettings();
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
+
+function setTheme(theme) {
+  const nextTheme = theme === "light" ? "light" : "dark";
+  document.documentElement.dataset.theme = nextTheme;
+  localStorage.setItem(THEME_KEY, nextTheme);
+  const toggle = $("#themeToggle");
+  if (toggle) {
+    const isDark = nextTheme === "dark";
+    toggle.textContent = isDark ? "☀" : "☾";
+    toggle.title = isDark ? "Switch to light theme" : "Switch to dark theme";
+    toggle.setAttribute("aria-label", toggle.title);
+  }
+}
 
 function loadMemories() {
   try { const saved = JSON.parse(localStorage.getItem(STORAGE_KEY)); return Array.isArray(saved) ? saved : seededMemories.map(item => ({...item})); }
@@ -157,6 +171,8 @@ $("#connectOllama").addEventListener("click", async () => { aiSettings.endpoint 
 $("#exportButton").addEventListener("click", exportMemorial);
 $("#railExport").addEventListener("click", exportMemorial);
 $("#resetDemo").addEventListener("click", () => { if (confirm("Restore the three sample memories?")) { memories = seededMemories.map(item => ({...item})); saveMemories(); renderArchive(); } });
+$("#themeToggle").addEventListener("click", () => setTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"));
+setTheme(localStorage.getItem(THEME_KEY) || "dark");
 renderArchive();
 $("#ollamaEndpoint").value = aiSettings.endpoint;
 $("#whisperEndpoint").value = aiSettings.whisperEndpoint;
