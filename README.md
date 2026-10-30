@@ -2,6 +2,8 @@
 
 > **A private place for the stories that stay.**
 
+<img width="2512" height="1260" alt="Screenshot 2026-10-30 181418" src="https://github.com/user-attachments/assets/ab060c56-a62b-4e5a-974a-4064a05c52ce" />
+
 <p align="center">
   An offline-first oral-history studio and virtual ofrenda for collecting memories, photographs, recipes, and voices without recreating the people behind them.
 </p>
