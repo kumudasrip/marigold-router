@@ -28,6 +28,8 @@ This project is intentionally **not** a digital recreation of a person. The
 Guide does not speak as the deceased, invent missing details, or turn a family
 archive into a fictional chatbot. When the answer is not present, it says so.
 
+[Watch the demo 🚀](https://youtu.be/t74MdHNO8nM?si=TRmUi6bRflMOHTtK)
+
 ## Why local AI?
 
 The archive is personal by design. Marigold uses local tools instead of a
